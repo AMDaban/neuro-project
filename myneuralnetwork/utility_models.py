@@ -15,3 +15,21 @@ class GaborParameters:
         self.lmd = lmd
         self.gamma = gamma
         self.psi = psi
+
+
+# IF stands for integrate and fire
+class IF:
+    def __init__(self, threshold):
+        self._threshold = threshold
+        self._potential = 0
+        self._hit_threshold = False
+
+    def change_potential(self, diff):
+        self._potential += diff
+
+        if self._potential > self._threshold:
+            self._potential = 0
+            self._hit_threshold = True
+
+    def hit_threshold(self):
+        return self._hit_threshold
