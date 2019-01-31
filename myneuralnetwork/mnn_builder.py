@@ -8,6 +8,7 @@ class MNNBuilder:
     def __init__(self):
         self._image_shape = None
         self._gabor_filters = None
+        self._gabor_pooling_kernel_shape = None
 
     def set_image_shape(self, image_shape):
         self._image_shape = image_shape
@@ -17,12 +18,17 @@ class MNNBuilder:
         self._gabor_filters = gabor_filters
         return self
 
+    def set_gabor_pooling_layer_kernel_shape(self, kernel_shape):
+        self._gabor_pooling_kernel_shape = kernel_shape
+        return self
+
     def build(self):
         self._validate()
 
         return MNN(
             image_shape=copy.deepcopy(self._image_shape),
-            gabor_filters=self._create_gabor_filters()
+            gabor_filters=self._create_gabor_filters(),
+            gabor_pooling_layer_kernel_shape=self._gabor_pooling_kernel_shape
         )
 
     def _create_gabor_filters(self):
@@ -41,6 +47,15 @@ class MNNBuilder:
         return filters
 
     def _validate(self):
+        if self._image_shape is None:
+            raise RuntimeError("image_shape not set")
+
+        if self._gabor_filters is None:
+            raise RuntimeError("gabor_layer_filters not set")
+
+        if self._gabor_pooling_kernel_shape is None:
+            raise RuntimeError("gabor_pooling_layer_kernel_shape not set")
+
         self._check_types()
 
         unique_gabor_heights = set(map(lambda x: x.shape.rows, self._gabor_filters))
@@ -56,6 +71,18 @@ class MNNBuilder:
         if gabor_height > self._image_shape.rows or gabor_width > self._image_shape.columns:
             raise RuntimeError("too big gabor filters")
 
+        if self._image_shape.rows < self._gabor_pooling_kernel_shape.rows:
+            raise RuntimeError("gabor_pooling_layer_kernel_shape height is too big")
+
+        if self._image_shape.rows % self._gabor_pooling_kernel_shape.rows != 0:
+            raise RuntimeError("image_shape height is not divisible by gabor_pooling_layer_kernel_shape height")
+
+        if self._image_shape.columns < self._gabor_pooling_kernel_shape.columns:
+            raise RuntimeError("gabor_pooling_layer_kernel_shape width is too big")
+
+        if self._image_shape.columns % self._gabor_pooling_kernel_shape.columns != 0:
+            raise RuntimeError("image_shape width is not divisible by gabor_pooling_layer_kernel_shape width")
+
     def _check_types(self):
         if type(self._image_shape) is not Shape:
             raise RuntimeError("image_shape must be an instance of Shape")
@@ -69,3 +96,6 @@ class MNNBuilder:
 
             if type(gabor_parameters.shape) is not Shape:
                 raise RuntimeError("GaborParameters.shape must be an instance of Shape")
+
+        if type(self._gabor_pooling_kernel_shape) is not Shape:
+            raise RuntimeError("gabor_pooling_layer_kernel_shape must be an instance of Shape")
