@@ -11,7 +11,8 @@ from .utility_models import IF
 # so please use MNNBuilder instead of creating object of this class directly
 class MNN:
     def __init__(self, image_shape, gabor_filters, gabor_pooling_layer_kernel_shape, complex_layer_map_count,
-                 complex_layer_map_shape, complex_layer_kernel_shape, neurons_threshold, random_generator):
+                 complex_layer_map_shape, complex_layer_kernel_shape, neurons_threshold, random_generator,
+                 stdp_function):
         self._image_shape = image_shape
         self._gabor_pooling_layer_kernel_shape = gabor_pooling_layer_kernel_shape
         self._complex_layer_map_count = complex_layer_map_count
@@ -20,6 +21,7 @@ class MNN:
         self._neurons_threshold = neurons_threshold
         self._random_generator = random_generator
         self._gabor_filters = gabor_filters
+        self._stdp_function = stdp_function
 
         self._gabor_filters_shape = None
         self._complex_layer_kernels = None
@@ -88,6 +90,9 @@ class MNN:
         # apply spikes and get first complex layer spike
         first_spike, complex_layer_spike_profile = self._apply_spikes(spike_profile)
 
+        if learn and first_spike is not None:
+            self._apply_stdp(first_spike, spike_profile)
+
         return complex_layer_spike_profile
 
     def _read_and_validate_image(self, image_path):
@@ -142,8 +147,30 @@ class MNN:
 
                             # set first spike time in all layers
                             if first_spike is None:
-                                first_spike = (complex_map_index, mapped_x, mapped_y)
+                                first_spike = (complex_map_index, mapped_x, mapped_y, clock)
 
             clock += 1
 
         return first_spike, complex_layer_spike_profile
+
+    def _apply_stdp(self, first_spike, spike_profile):
+        kernel_height, kernel_width = self._complex_layer_kernel_shape.get_tuple()
+
+        # function to filter spike_profile with
+        def check_spike(spike):
+            if spike[1] < first_spike[1] or spike[1] >= first_spike[1] + kernel_height:
+                return False
+
+            if spike[2] < first_spike[2] or spike[2] >= first_spike[2] + kernel_width:
+                return False
+
+            return True
+
+        # iterate over related spikes and apply stdp
+        for time, single_spike in enumerate(spike_profile):
+            if check_spike(single_spike):
+                weight_change = self._stdp_function(first_spike[3] - time)
+                target_kernel = self._complex_layer_kernels[first_spike[0]]
+                target_weight_x = single_spike[1] - first_spike[1]
+                target_weight_y = single_spike[2] - first_spike[2]
+                target_kernel[single_spike[0]][target_weight_x][target_weight_y] += weight_change

@@ -13,6 +13,7 @@ class MNNBuilder:
         self._complex_layer_map_count = None
         self._complex_layer_kernel_shape = None
         self._random_generator = None
+        self._stdp_function = None
 
     def set_image_shape(self, image_shape):
         self._image_shape = image_shape
@@ -42,6 +43,10 @@ class MNNBuilder:
         self._random_generator = generator
         return self
 
+    def set_stdp_function(self, function):
+        self._stdp_function = function
+        return self
+
     def build(self):
         self._validate()
 
@@ -58,7 +63,8 @@ class MNNBuilder:
             ),
             complex_layer_kernel_shape=self._complex_layer_kernel_shape,
             neurons_threshold=self._neurons_threshold,
-            random_generator=self._random_generator
+            random_generator=self._random_generator,
+            stdp_function=self._stdp_function
         )
 
     def _create_gabor_filters(self):
@@ -97,6 +103,9 @@ class MNNBuilder:
 
         if self._random_generator is None:
             raise RuntimeError("random_generator is not set")
+
+        if self._stdp_function is None:
+            raise RuntimeError("stdp_function is not set")
 
         self._check_types()
 
