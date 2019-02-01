@@ -2,10 +2,12 @@ import copy
 import cv2
 import numpy as np
 from skimage.measure import block_reduce
+from .utility_functions import extract_spike_profile
+from .utility_models import IF
 
 
 # MNN stands for 'My Neural Network'
-# It is assumed that all parameters have been evaluated
+# It is assumed that all parameters have been checked
 # so please use MNNBuilder instead of creating object of this class directly
 class MNN:
     def __init__(self, image_shape, gabor_filters, gabor_pooling_layer_kernel_shape, complex_layer_map_count,
@@ -21,6 +23,7 @@ class MNN:
 
         self._gabor_filters_shape = None
         self._complex_layer_kernels = None
+        self._complex_layer_neuron_maps = None
 
         self._prepare()
 
@@ -50,6 +53,18 @@ class MNN:
                 )
             )
 
+        # prepare complex layer neuron maps
+        self._complex_layer_neuron_maps = []
+        for i in range(self._complex_layer_map_count):
+            map_height, map_width = self._complex_layer_map_shape.get_tuple()
+
+            # noinspection PyUnusedLocal
+            neurons = [IF(self._neurons_threshold) for j in range(map_height * map_width)]
+
+            self._complex_layer_neuron_maps.append(
+                np.array(neurons).reshape(map_height, map_width)
+            )
+
     def run(self, image_path, learn=False):
         image = self._read_and_validate_image(image_path)
 
@@ -67,6 +82,14 @@ class MNN:
             ) for filtered_image in gabor_layer_maps
         ]
 
+        # extract spike profile
+        spike_profile = extract_spike_profile(gabor_pooling_layer_maps)
+
+        # apply spikes and get first complex layer spike
+        first_spike, complex_layer_spike_profile = self._apply_spikes(spike_profile)
+
+        return complex_layer_spike_profile
+
     def _read_and_validate_image(self, image_path):
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
@@ -77,3 +100,50 @@ class MNN:
             raise RuntimeError("image size is not appropriate")
 
         return image
+
+    def _apply_spikes(self, spike_profile):
+        first_spike = None
+
+        # complex_layer_spike_profile shows complex layer maps first spike time (relative to each other)
+        # noinspection PyUnusedLocal
+        complex_layer_spike_profile = [-1 for k in range(self._complex_layer_map_count)]
+
+        # a simple clock that mimics the time
+        clock = 0
+
+        kernel_height, kernel_width = self._complex_layer_kernel_shape.get_tuple()
+        for map_index, i, j, map_value in spike_profile:
+            for n in range(kernel_height):
+                for m in range(kernel_width):
+                    mapped_x = i - n
+                    mapped_y = j - m
+
+                    if mapped_x < 0 or mapped_x >= self._complex_layer_map_shape.rows:
+                        continue
+                    if mapped_y < 0 or mapped_y >= self._complex_layer_map_shape.columns:
+                        continue
+
+                    for complex_map_index in range(self._complex_layer_map_count):
+                        # calculate neuron potential change
+                        potential_change = self._complex_layer_kernels[complex_map_index][map_index][n][m]
+
+                        # extract target neuron
+                        target_neuron = self._complex_layer_neuron_maps[complex_map_index][mapped_x][mapped_y]
+
+                        # apply spike effect on target neuron
+                        target_neuron.change_potential(potential_change)
+
+                        # check if target neuron sent a spike
+                        if target_neuron.hit_threshold():
+
+                            # set first spike time in this layer
+                            if complex_layer_spike_profile[complex_map_index] == -1:
+                                complex_layer_spike_profile[complex_map_index] = clock
+
+                            # set first spike time in all layers
+                            if first_spike is None:
+                                first_spike = (complex_map_index, mapped_x, mapped_y)
+
+            clock += 1
+
+        return first_spike, complex_layer_spike_profile

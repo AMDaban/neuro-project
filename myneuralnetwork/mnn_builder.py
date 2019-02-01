@@ -158,6 +158,6 @@ class MNNBuilder:
 
     def _get_gabor_pooling_layer_maps_shape(self):
         return Shape(
-            rows=self._image_shape.rows / self._gabor_pooling_kernel_shape.rows,
-            columns=self._image_shape.columns / self._gabor_pooling_kernel_shape.columns
+            rows=int(self._image_shape.rows / self._gabor_pooling_kernel_shape.rows),
+            columns=int(self._image_shape.columns / self._gabor_pooling_kernel_shape.columns)
         )
