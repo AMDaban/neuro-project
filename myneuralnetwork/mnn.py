@@ -68,6 +68,8 @@ class MNN:
             )
 
     def run(self, image_path, learn=False):
+        print("run on {}, learn: {}".format(image_path, learn))
+
         image = self._read_and_validate_image(image_path)
 
         # filter image by given gabor filters
@@ -92,6 +94,8 @@ class MNN:
 
         if learn and first_spike is not None:
             self._apply_stdp(first_spike, spike_profile)
+
+        self._reset_neurons()
 
         return complex_layer_spike_profile
 
@@ -174,3 +178,22 @@ class MNN:
                 target_weight_x = single_spike[1] - first_spike[1]
                 target_weight_y = single_spike[2] - first_spike[2]
                 target_kernel[single_spike[0]][target_weight_x][target_weight_y] += weight_change
+
+    def print_complex_layer_kernels(self):
+        print("MNN complex layer current kernels:")
+        for index, kernel in enumerate(self._complex_layer_kernels):
+            print("\tcomplex feature {}:".format(index))
+            for kernel_map_index, kernel_map in enumerate(kernel):
+                print("\t\tkernel-map {}:".format(kernel_map_index))
+                for i in range(len(kernel_map)):
+                    res = "\t\t\t"
+                    for j in range(len(kernel_map[i])):
+                        res += str(kernel_map[i][j]).ljust(20)
+                        res += "\t\t"
+                    print(res)
+
+    def _reset_neurons(self):
+        for neuron_map in self._complex_layer_neuron_maps:
+            for row in neuron_map:
+                for neuron in row:
+                    neuron.reset()

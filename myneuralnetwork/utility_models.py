@@ -33,3 +33,7 @@ class IF:
 
     def hit_threshold(self):
         return self._hit_threshold
+
+    def reset(self):
+        self._potential = 0
+        self._hit_threshold = False
