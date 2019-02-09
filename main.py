@@ -6,6 +6,7 @@ from os import path, listdir
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import ShuffleSplit
+from sklearn import preprocessing
 from progress.bar import Bar
 
 gabor_filters = []
@@ -48,7 +49,7 @@ second_category = "stop_sign"
 first_category_parent_dir = path.join(source_dir, first_category)
 second_category_parent_dir = path.join(source_dir, second_category)
 
-number_of_image_repeats = 1
+number_of_image_repeats = 3
 
 print("training MNN on {}: ".format(first_category))
 # run on first category
@@ -94,6 +95,12 @@ for file_name in Bar('Processing').iter(listdir(second_category_parent_dir)):
     label_profile.append(1)
 
 print("training SVM and compute accuracy by Cross-Validation...")
+
+# scale data
+data_profile = preprocessing.scale(data_profile)
+
+# # normalize data
+# data_profile = preprocessing.normalize(data_profile, "l2")
 
 # initialize SVM
 clf = SVC(gamma='auto')

@@ -74,7 +74,7 @@ class MNNBuilder:
             kernel_width = parameters.shape.columns
 
             kernel = cv2.getGaborKernel(
-                (kernel_height, kernel_width), parameters.sigma, parameters.theta,
+                (kernel_width, kernel_height), parameters.sigma, parameters.theta,
                 parameters.lmd, parameters.gamma, ktype=cv2.CV_32F
             )
 
