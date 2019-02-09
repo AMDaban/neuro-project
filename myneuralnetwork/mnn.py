@@ -91,7 +91,7 @@ class MNN:
         # apply spikes and get first complex layer spike
         first_spike, complex_layer_spike_profile = self._apply_spikes(spike_profile)
 
-        if learn and first_spike is not None:
+        if learn and (first_spike is not None):
             self._apply_stdp(first_spike, spike_profile)
 
         self._reset_neurons()

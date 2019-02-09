@@ -11,7 +11,8 @@ from progress.bar import Bar
 
 gabor_filters = []
 for theta in np.arange(0, np.pi, np.pi / 4):
-    parameters = GaborParameters(Shape(31, 31), 4.0, theta, 20, 0.5, 0)
+    # parameters = GaborParameters(Shape(31, 31), 4.0, theta, 20, 0.5, 0)
+    parameters = GaborParameters(Shape(7, 7), 10.0, theta, 6, 0.5, 0)
     gabor_filters.append(parameters)
 
 
@@ -34,7 +35,7 @@ builder = MNNBuilder()
 builder.set_image_shape(Shape(200, 200)) \
     .set_gabor_layer_filters(gabor_filters) \
     .set_gabor_pooling_layer_kernel_shape(Shape(10, 10)) \
-    .set_neurons_threshold(1) \
+    .set_neurons_threshold(0.5) \
     .set_complex_layer_map_count(5) \
     .set_complex_layer_kernel_shape(Shape(7, 7)) \
     .set_random_generator(random_generator) \
@@ -103,7 +104,7 @@ data_profile = preprocessing.scale(data_profile)
 clf = SVC(gamma='auto')
 
 # perform Cross-Validation and compute accuracy
-cv = ShuffleSplit(n_splits=50, test_size=0.1, random_state=0)
+cv = ShuffleSplit(n_splits=10, test_size=0.1, random_state=0)
 scores = cross_val_score(clf, data_profile, label_profile, cv=cv)
 
 print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
