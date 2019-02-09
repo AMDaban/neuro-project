@@ -4,7 +4,9 @@ import random
 import math
 from os import path, listdir
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import ShuffleSplit
+from progress.bar import Bar
 
 gabor_filters = []
 for theta in np.arange(0, np.pi, np.pi / 8):
@@ -41,95 +43,63 @@ mnn = builder.build()
 
 source_dir = "./resources/refined"
 first_category = "car_side"
-second_category = "soccer_ball"
+second_category = "stop_sign"
 
 first_category_parent_dir = path.join(source_dir, first_category)
 second_category_parent_dir = path.join(source_dir, second_category)
 
 number_of_image_repeats = 1
 
+print("training MNN on {}: ".format(first_category))
 # run on first category
-for file_name in listdir(first_category_parent_dir):
+for file_name in Bar('Processing').iter(listdir(first_category_parent_dir)):
 
     # run on every category image for `number_of_image_repeats` times
     for repeat in range(number_of_image_repeats):
         file_path = path.join(first_category_parent_dir, file_name)
-        result = mnn.run(file_path, True)
+        mnn.run(file_path, True)
 
+print("training MNN on {}:".format(second_category))
 # run on second category
-for file_name in listdir(second_category_parent_dir):
+for file_name in Bar('Processing').iter(listdir(second_category_parent_dir)):
 
     # run on every category image for `number_of_image_repeats` times
     for repeat in range(number_of_image_repeats):
         file_path = path.join(second_category_parent_dir, file_name)
-        result = mnn.run(file_path, True)
+        mnn.run(file_path, True)
 
-clf_train_source_dir = "./resources/refined"
-first_clf_train_category = "car_side"
-second_clf_train_category = "soccer_ball"
-
-first_clf_train_category_parent_dir = path.join(clf_train_source_dir, first_clf_train_category)
-second_clf_train_category_parent_dir = path.join(clf_train_source_dir, second_clf_train_category)
-
-label_profile = []
 data_profile = []
+label_profile = []
 
-# run on first train category
-for file_name in listdir(first_clf_train_category_parent_dir):
-    file_path = path.join(first_clf_train_category_parent_dir, file_name)
+print("running MNN on {}:".format(first_category))
+# run on first category
+for file_name in Bar('Processing').iter(listdir(first_category_parent_dir)):
+    file_path = path.join(first_category_parent_dir, file_name)
     result = mnn.run(file_path, False)
 
-    # 0 indicates first category
+    data_profile.append(result)
+
+    # `0` indicates first category
     label_profile.append(0)
-    data_profile.append(result)
 
-# run on second train category
-for file_name in listdir(second_clf_train_category_parent_dir):
-    file_path = path.join(second_clf_train_category_parent_dir, file_name)
+print("running MNN on {}:".format(second_category))
+# run on second category
+for file_name in Bar('Processing').iter(listdir(second_category_parent_dir)):
+    file_path = path.join(second_category_parent_dir, file_name)
     result = mnn.run(file_path, False)
 
-    # 1 indicates second category
-    label_profile.append(1)
     data_profile.append(result)
 
-# initialize classifier
+    # `1` indicates second category
+    label_profile.append(1)
+
+print("training SVM and compute accuracy by Cross-Validation...")
+
+# initialize SVM
 clf = SVC(gamma='auto')
 
-# train classifier
-clf.fit(data_profile, label_profile)
+# perform Cross-Validation and compute accuracy
+cv = ShuffleSplit(n_splits=10, test_size=0.1, random_state=0)
+scores = cross_val_score(clf, data_profile, label_profile, cv=cv)
 
-clf_test_source_dir = "./resources/test"
-first_clf_test_category = "car_side"
-second_clf_test_category = "soccer_ball"
-
-first_clf_test_category_parent_dir = path.join(clf_test_source_dir, first_clf_test_category)
-second_clf_test_category_parent_dir = path.join(clf_test_source_dir, second_clf_test_category)
-
-test_label_profile = []
-test_data_profile = []
-
-# run on first test category
-for file_name in listdir(first_clf_test_category_parent_dir):
-    file_path = path.join(first_clf_test_category_parent_dir, file_name)
-    result = mnn.run(file_path, False)
-
-    # 0 indicates first category
-    test_label_profile.append(0)
-    test_data_profile.append(result)
-
-# run on second train category
-for file_name in listdir(second_clf_test_category_parent_dir):
-    file_path = path.join(second_clf_test_category_parent_dir, file_name)
-    result = mnn.run(file_path, False)
-
-    # 1 indicates second category
-    test_label_profile.append(1)
-    test_data_profile.append(result)
-
-# predict every mnn out put
-estimation_profile = clf.predict(test_data_profile)
-
-# compute classifier accuracy
-accuracy = accuracy_score(test_label_profile, estimation_profile)
-
-print("accuracy is: {}".format(accuracy))
+print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))

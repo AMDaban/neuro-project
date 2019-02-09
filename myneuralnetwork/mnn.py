@@ -68,7 +68,6 @@ class MNN:
             )
 
     def run(self, image_path, learn=False):
-        print("run on {}, learn: {}".format(image_path, learn))
 
         image = self._read_and_validate_image(image_path)
 
