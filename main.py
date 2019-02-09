@@ -11,8 +11,8 @@ from progress.bar import Bar
 
 gabor_filters = []
 for theta in np.arange(0, np.pi, np.pi / 4):
-    # parameters = GaborParameters(Shape(31, 31), 4.0, theta, 20, 0.5, 0)
-    parameters = GaborParameters(Shape(7, 7), 10.0, theta, 6, 0.5, 0)
+    parameters = GaborParameters(Shape(31, 31), 4.0, theta, 20, 0.5, 0)
+    # parameters = GaborParameters(Shape(7, 7), 10.0, theta, 6, 0.5, 0)
     gabor_filters.append(parameters)
 
 
@@ -23,7 +23,7 @@ def random_generator():
 # time_diff = t_post - t_pre
 def stdp_weight_change(time_diff):
     positive_learning_rate = 1 / 50
-    negative_learning_rate = 1 / 50
+    negative_learning_rate = 1 / 500
 
     if time_diff >= 0:
         return positive_learning_rate * math.exp(-1 * time_diff / 10000)
@@ -107,4 +107,4 @@ clf = SVC(gamma='auto')
 cv = ShuffleSplit(n_splits=10, test_size=0.1, random_state=0)
 scores = cross_val_score(clf, data_profile, label_profile, cv=cv)
 
-print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+print("Accuracy: %0.2f" % (scores.mean()))
